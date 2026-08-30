@@ -7,6 +7,9 @@ from src.config import settings
 from src.services.web_server import app as fastapi_app
 from src.bot.main import build_bot_application
 
+# Eksport 'app' di peringkat modul supaya ASGI runner boleh mencarinya
+app = fastapi_app
+
 console = Console()
 logger = logging.getLogger(__name__)
 
@@ -14,11 +17,11 @@ logger = logging.getLogger(__name__)
 async def run_services():
     """
     Menjalankan Pelayan Web FastAPI (Uvicorn) dan Telegram Bot 
-    secara serentak di dalam satu Asyncio Event Loop[cite: 1].
+    secara serentak di dalam satu Asyncio Event Loop.
     """
     # 1. Konfigurasi Pelayan FastAPI (Uvicorn)
     config = uvicorn.Config(
-        app=fastapi_app,
+        app=app,
         host="0.0.0.0",
         port=settings.PORT,
         log_level="info"
