@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class StorageManager:
     """
-    Menguruskan pengesyoran disk tempatan 50GB OCI VM dan operasi penfailan[cite: 1].
+    Menguruskan pengesyoran disk tempatan 50GB OCI VM dan operasi penfailan.
     """
     def __init__(self):
         self.download_path = Path(settings.DOWNLOAD_DIR).resolve()
@@ -22,7 +22,7 @@ class StorageManager:
 
     def get_disk_usage(self) -> Dict[str, Any]:
         """
-        Membaca statistik baki dan penggunaan ruang disk VM (50GB)[cite: 1].
+        Membaca statistik baki dan penggunaan ruang disk VM (50GB).
         """
         total, used, free = shutil.disk_usage(self.download_path)
         percent_used = (used / total) * 100
@@ -36,28 +36,35 @@ class StorageManager:
 
     def list_files(self) -> List[Dict[str, Any]]:
         """
-        Menyenaraikan semua fail dan folder yang berada di dalam downloads/[cite: 1].
+        Menyenaraikan semua fail secara rekursif di dalam downloads/ (termasuk sub-folder).
         """
         files_list = []
         if not self.download_path.exists():
             return files_list
 
-        for item in self.download_path.iterdir():
-            # Abaikan fail tersembunyi seperti .gitkeep
-            if item.name.startswith("."):
+        # Imbas semua item di dalam folder downloads secara rekursif
+        for item in self.download_path.rglob('*'):
+            # Ambil fail sahaja (abaikan folder kosong/sub-folder sebagai sasaran download)
+            if not item.is_file():
                 continue
 
-            size = 0
-            if item.is_file():
-                size = item.stat().st_size
-            elif item.is_dir():
-                size = sum(f.stat().st_size for f in item.glob('**/*') if f.is_file())
+            # Abaikan fail tersembunyi (.) & fail kawalan sementara aria2 (.aria2)
+            if item.name.startswith(".") or item.name.endswith(".aria2"):
+                continue
+
+            # Abaikan jika fail berada di dalam folder tersembunyi
+            rel_path = item.relative_to(self.download_path)
+            if any(part.startswith(".") for part in rel_path.parts):
+                continue
+
+            rel_path_str = str(rel_path)
 
             files_list.append({
-                "name": item.name,
+                "name": rel_path_str,             # Laluan relatif untuk URL FastAPI & delete
+                "display_name": item.name,        # Nama fail asal untuk paparan mesra Telegram
                 "path": str(item),
-                "size_bytes": size,
-                "is_dir": item.is_dir(),
+                "size_bytes": item.stat().st_size,
+                "is_dir": False,
                 "mtime": item.stat().st_mtime
             })
 
@@ -67,7 +74,7 @@ class StorageManager:
 
     def delete_file(self, filename: str) -> bool:
         """
-        Memadam fail atau folder secara kekal dari disk VM apabila diminta dari Telegram[cite: 1].
+        Memadam fail atau folder secara kekal dari disk VM apabila diminta dari Telegram.
         """
         target_path = (self.download_path / filename).resolve()
 
@@ -83,6 +90,10 @@ class StorageManager:
         try:
             if target_path.is_file():
                 target_path.unlink()
+                # Padam folder induk jika folder tersebut kosong selepas fail dipadam
+                parent = target_path.parent
+                if parent != self.download_path and parent.exists() and not any(parent.iterdir()):
+                    shutil.rmtree(parent)
             elif target_path.is_dir():
                 shutil.rmtree(target_path)
 

@@ -1,4 +1,5 @@
 import re
+import html
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -94,7 +95,7 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
     Mengendalikan seluruh aliran Butang GUI Telegram (Full Interactivity).
     """
     query = update.callback_query
-    if not query:
+    if not query or not query.data:
         return
 
     await query.answer()
@@ -185,16 +186,19 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
             files_text = "📁 <b>Senarai Fail & Direct Download Link (HTTP):</b>\n\n"
             for f in files:
                 size_str = format_bytes(f["size_bytes"])
+                display_name = f.get("display_name", f["name"])
+                safe_display_name = html.escape(display_name)
                 download_url = get_download_url(f["name"])
+                
                 files_text += (
-                    f"📄 <b>{f['name']}</b> ({size_str})\n"
+                    f"📦 <b>{safe_display_name}</b> ({size_str})\n"
                     f"🔗 <a href=\"{download_url}\">Klik Untuk Download / IDM</a>\n\n"
                 )
 
         await query.edit_message_text(
             files_text,
             reply_markup=get_back_keyboard(),
-            parse_mode="HTML",  # Ditukar ke HTML supaya pautan URL tidak rosak
+            parse_mode="HTML",
             disable_web_page_preview=True
         )
 

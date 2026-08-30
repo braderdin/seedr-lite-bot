@@ -21,7 +21,6 @@ download_path = Path(settings.DOWNLOAD_DIR).resolve()
 download_path.mkdir(parents=True, exist_ok=True)
 
 # Pemetaan Pelayan Fail Statik (Static Files Mount)
-# Membolehkan akses fail via: http://SERVER_DOMAIN/downloads/nama_fail.mkv
 app.mount(
     "/downloads",
     StaticFiles(directory=str(download_path), html=False),
@@ -41,10 +40,11 @@ async def health_check():
     })
 
 
-def get_download_url(filename: str) -> str:
+def get_download_url(relative_path: str) -> str:
     """
-    Menjana pautan direct HTTP URL yang diselaraskan untuk IDM.
+    Menjana URL muat turun selamat untuk sebarang jenis fail dan sub-folder.
     """
-    encoded_filename = quote(filename)
+    clean_path = relative_path.replace("\\", "/")
+    encoded_path = quote(clean_path)
     base_url = settings.SERVER_DOMAIN.rstrip("/")
-    return f"{base_url}/downloads/{encoded_filename}"
+    return f"{base_url}/downloads/{encoded_path}"
