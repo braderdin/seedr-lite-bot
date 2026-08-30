@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Nyahsulit Kunci SSH (GPG)
         env:
@@ -37,14 +37,12 @@ jobs:
             -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             ./ $OCI_USERNAME@$OCI_HOST:/home/ubuntu/seedr-lite-bot/
 
-      - name: Pasang Dependencies & Restart Systemd Service
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.OCI_HOST }}
-          username: ${{ secrets.OCI_USERNAME }}
-          key_path: ~/.ssh/id_rsa
-          port: 22
-          script: |
+      - name: Pasang Dependencies & Restart Systemd Service (Native SSH)
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $OCI_USERNAME@$OCI_HOST << 'EOF'
             cd /home/ubuntu/seedr-lite-bot
             python3 -m venv venv
             source venv/bin/activate
@@ -52,3 +50,4 @@ jobs:
             pip install -r requirements.txt
             sudo systemctl restart seedr-bot
             echo "🚀 Deployment & restart perkhidmatan systemd berjaya!"
+          EOF
