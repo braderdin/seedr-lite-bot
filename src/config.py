@@ -25,18 +25,26 @@ class Settings(BaseSettings):
     SERVER_DOMAIN: str = "http://168.107.64.203:8000"
     DOWNLOAD_DIR: str = "./downloads"
 
-    # OCI & Encryption Keys (Untuk rujukan deployment)
+    # OCI & Encryption Keys
     GPG_PASSPHRASE: Optional[str] = None
     OCI_HOST: Optional[str] = "168.107.64.203"
     OCI_USERNAME: Optional[str] = "ubuntu"
     OCI_SUBNET_ID: Optional[str] = None
 
-    # Membaca .env.local dari root folder jika wujud
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @property
+    def download_path(self) -> Path:
+        """Mengembalikan Path mutlak untuk folder muat turun."""
+        path = Path(self.DOWNLOAD_DIR)
+        if not path.is_absolute():
+            path = BASE_DIR / path
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     def is_owner(self, user_id: int) -> bool:
         """

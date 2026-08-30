@@ -1,3 +1,4 @@
+import re
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -49,12 +50,17 @@ async def magnet_message_handler(update: Update, context: ContextTypes.DEFAULT_T
     if not update.message or not update.message.text:
         return
 
-    text = update.message.text.strip()
-    if text.startswith("magnet:?"):
+    raw_text = update.message.text.strip()
+    
+    # Ekstrak pautan magnet bersih menggunakan Regex
+    magnet_match = re.search(r'(magnet:\?xt=urn:[a-zA-Z0-9:]+[^\s]*)', raw_text)
+
+    if magnet_match:
+        clean_magnet = magnet_match.group(1)
         console.print(f"[bold green]🧲 Memproses Magnet Link...[/bold green]")
         
-        # Panggil enjin aria2c secara nyata
-        gid = aria2_manager.add_magnet(text)
+        # Panggil enjin aria2c
+        gid = aria2_manager.add_magnet(clean_magnet)
 
         if gid:
             reply_msg = (
@@ -64,7 +70,11 @@ async def magnet_message_handler(update: Update, context: ContextTypes.DEFAULT_T
                 f"Tekan butang **📊 Status Live Download** di bawah untuk semakan peratusan."
             )
         else:
-            reply_msg = "❌ **Ralat:** Gagal menambah pautan magnet ke daemon aria2c."
+            reply_msg = (
+                "❌ **Ralat:** Gagal menambah pautan magnet ke daemon aria2c.\n\n"
+                "Sila pastikan perkhidmatan `aria2c` di VM telah dihidupkan dengan port RPC `6800` "
+                "dan `ARIA2_RPC_SECRET` di `.env.local` adalah tepat."
+            )
 
         await update.message.reply_text(
             reply_msg,
@@ -217,7 +227,6 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         else:
             msg = f"❌ **Gagal Dipadam:** Fail `{filename_to_delete}` tidak dijumpai."
 
-        # Kemaskini semula senarai fail
         remaining_files = storage_manager.list_files()
         keyboard = get_delete_files_keyboard(remaining_files) if remaining_files else get_back_keyboard()
 

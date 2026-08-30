@@ -1,0 +1,61 @@
+name: Deploy Seedr-Lite to OCI VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Nyahsulit Kunci SSH (GPG)
+        id: decrypt_ssh
+        env:
+          PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          mkdir -p ~/.ssh
+          gpg --quiet --batch --yes --decrypt --passphrase "$PASSPHRASE" \
+            --output ~/.ssh/id_rsa \
+            oci_gpg_key/ssh-key-2026-07-27.key.gpg
+          chmod 600 ~/.ssh/id_rsa
+          
+          echo "key<<EOF" >> $GITHUB_OUTPUT
+          cat ~/.ssh/id_rsa >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Sync Fail ke OCI VM (Rsync)
+        uses: appleboy/rsync-action@v0.1.10
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ steps.decrypt_ssh.outputs.key }}
+          port: 22
+          source: "./"
+          target: "/home/ubuntu/seedr-lite-bot"
+          exclude: |
+            .git*
+            venv/
+            __pycache__/
+            *.log
+            downloads/
+
+      - name: Pasang Dependencies & Restart Systemd Service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USERNAME }}
+          key: ${{ steps.decrypt_ssh.outputs.key }}
+          port: 22
+          script: |
+            cd /home/ubuntu/seedr-lite-bot
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            sudo systemctl restart seedr-bot
+            echo "🚀 Deployment & restart perkhidmatan systemd berjaya!"
