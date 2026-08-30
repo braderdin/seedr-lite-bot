@@ -180,21 +180,21 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
         files = storage_manager.list_files()
         
         if not files:
-            files_text = "📁 **Senarai Fail Sedia Ada**\n\nℹ️ Folder `downloads/` kosong."
+            files_text = "📁 <b>Senarai Fail Sedia Ada</b>\n\nℹ️ Folder <code>downloads/</code> kosong."
         else:
-            files_text = "📁 **Senarai Fail & Direct Download Link (HTTP):**\n\n"
+            files_text = "📁 <b>Senarai Fail & Direct Download Link (HTTP):</b>\n\n"
             for f in files:
                 size_str = format_bytes(f["size_bytes"])
                 download_url = get_download_url(f["name"])
                 files_text += (
-                    f"📄 **{f['name']}** ({size_str})\n"
-                    f"🔗 [Klik Untuk Download / IDM]({download_url})\n\n"
+                    f"📄 <b>{f['name']}</b> ({size_str})\n"
+                    f"🔗 <a href=\"{download_url}\">Klik Untuk Download / IDM</a>\n\n"
                 )
 
         await query.edit_message_text(
             files_text,
             reply_markup=get_back_keyboard(),
-            parse_mode="Markdown",
+            parse_mode="HTML",  # Ditukar ke HTML supaya pautan URL tidak rosak
             disable_web_page_preview=True
         )
 
