@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Nyahsulit Kunci SSH (GPG)
         env:
@@ -34,7 +34,7 @@ jobs:
             --exclude='__pycache__/' \
             --exclude='*.log' \
             --exclude='downloads/' \
-            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ServerAliveInterval=60" \
             ./ $OCI_USERNAME@$OCI_HOST:/home/ubuntu/seedr-lite-bot/
 
       - name: Pasang Dependencies & Restart Systemd Service (Native SSH)
@@ -42,12 +42,28 @@ jobs:
           OCI_HOST: ${{ secrets.OCI_HOST }}
           OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $OCI_USERNAME@$OCI_HOST << 'EOF'
+          ssh -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=10 \
+            $OCI_USERNAME@$OCI_HOST << 'EOF'
+            set -e
             cd /home/ubuntu/seedr-lite-bot
-            python3 -m venv venv
+            
+            # 1. Cipta venv jika belum wujud
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
             source venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
+
+            # 2. Pengurusan Cache Pip OCI (Padam cache fail yang melebihi 5 hari sahaja)
+            mkdir -p ~/.cache/pip
+            find ~/.cache/pip -type f -mtime +5 -delete 2>/dev/null || true
+
+            # 3. Pasang pakej guna cache OCI sedia ada & utamakan pre-built binary
+            pip install --prefer-binary -r requirements.txt
+
+            # 4. Restart perkhidmatan systemd
             sudo systemctl restart seedr-bot
             echo "🚀 Deployment & restart perkhidmatan systemd berjaya!"
           EOF
