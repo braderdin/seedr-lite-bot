@@ -6,5 +6,5 @@ pydantic-settings>=2.2.0
 pydantic>=2.13.4
 python-dotenv>=1.2.3
 rich>=15.0.0
-requests>=2.31.0
+requests>=2.34.2
 httpx>=0.28.1
