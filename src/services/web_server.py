@@ -43,9 +43,8 @@ async def health_check():
 
 def get_download_url(filename: str) -> str:
     """
-    Menjana pautan direct HTTP URL dengan encoding selamat untuk semua simbol khas[cite: 1].
+    Menjana pautan direct HTTP URL yang diselaraskan untuk IDM.
     """
-    # safe='' memastikan simbol [ ] ( ) di-encode sepenuhnya tanpa dipotong oleh Telegram
-    encoded_filename = quote(filename, safe='')
+    encoded_filename = quote(filename)
     base_url = settings.SERVER_DOMAIN.rstrip("/")
     return f"{base_url}/downloads/{encoded_filename}"
