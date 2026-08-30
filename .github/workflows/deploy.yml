@@ -14,7 +14,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Nyahsulit Kunci SSH (GPG)
-        id: decrypt_ssh
         env:
           PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
@@ -23,33 +22,27 @@ jobs:
             --output ~/.ssh/id_rsa \
             oci_gpg_key/ssh-key-2026-07-27.key.gpg
           chmod 600 ~/.ssh/id_rsa
-          
-          echo "key<<EOF" >> $GITHUB_OUTPUT
-          cat ~/.ssh/id_rsa >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Sync Fail ke OCI VM (Rsync)
-        uses: appleboy/rsync-action@v0.1.10
-        with:
-          host: ${{ secrets.OCI_HOST }}
-          username: ${{ secrets.OCI_USERNAME }}
-          key: ${{ steps.decrypt_ssh.outputs.key }}
-          port: 22
-          source: "./"
-          target: "/home/ubuntu/seedr-lite-bot"
-          exclude: |
-            .git*
-            venv/
-            __pycache__/
-            *.log
-            downloads/
+      - name: Sync Fail ke OCI VM (Native Rsync)
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+        run: |
+          rsync -avz --delete \
+            --exclude='.git*' \
+            --exclude='venv/' \
+            --exclude='__pycache__/' \
+            --exclude='*.log' \
+            --exclude='downloads/' \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            ./ $OCI_USERNAME@$OCI_HOST:/home/ubuntu/seedr-lite-bot/
 
       - name: Pasang Dependencies & Restart Systemd Service
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USERNAME }}
-          key: ${{ steps.decrypt_ssh.outputs.key }}
+          key_path: ~/.ssh/id_rsa
           port: 22
           script: |
             cd /home/ubuntu/seedr-lite-bot
