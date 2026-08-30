@@ -11,11 +11,16 @@ logger = logging.getLogger(__name__)
 
 class Aria2Manager:
     """
-    Menguruskan komunikasi RPC dengan daemon aria2c menggunakan perpustakaan aria2p.
+    Menguruskan komunikasi RPC dengan daemon aria2c menggunakan perpustakaan aria2p[cite: 12].
     """
     def __init__(self):
+        # Semak dan pastikan host mempunyai awalan http://
+        host = settings.ARIA2_RPC_HOST
+        if not host.startswith("http://") and not host.startswith("https://"):
+            host = f"http://{host}"
+
         self._client = aria2p.Client(
-            host=settings.ARIA2_RPC_HOST,
+            host=host,
             port=settings.ARIA2_RPC_PORT,
             secret=settings.ARIA2_RPC_SECRET
         )

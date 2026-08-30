@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_LINK: Optional[str] = None
 
     # Aria2 RPC Configuration
-    ARIA2_RPC_HOST: str = "127.0.0.1"
+    ARIA2_RPC_HOST: str = "http://127.0.0.1"
     ARIA2_RPC_PORT: int = 6800
     ARIA2_RPC_SECRET: str = ""
 

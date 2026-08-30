@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Nyahsulit Kunci SSH (GPG)
         env:
@@ -28,12 +28,15 @@ jobs:
           OCI_HOST: ${{ secrets.OCI_HOST }}
           OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
         run: |
-          rsync -avz --delete \
+          rsync -avz \
+            --exclude='.env*' \
+            --exclude='.env.local' \
             --exclude='.git*' \
             --exclude='venv/' \
             --exclude='__pycache__/' \
             --exclude='*.log' \
             --exclude='downloads/' \
+            --exclude='.req_hash' \
             -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ServerAliveInterval=60" \
             ./ $OCI_USERNAME@$OCI_HOST:/home/ubuntu/seedr-lite-bot/
 
@@ -56,12 +59,21 @@ jobs:
             fi
             source venv/bin/activate
 
-            # 2. Pengurusan Cache Pip OCI (Padam cache fail yang melebihi 5 hari sahaja)
+            # 2. Pengurusan Cache Pip OCI
             mkdir -p ~/.cache/pip
             find ~/.cache/pip -type f -mtime +5 -delete 2>/dev/null || true
 
-            # 3. Pasang pakej guna cache OCI sedia ada & utamakan pre-built binary
-            pip install --prefer-binary -r requirements.txt
+            # 3. Semak Hash requirements.txt untuk melangkau pemasangan jika tiada perubahan
+            NEW_HASH=$(sha256sum requirements.txt | awk '{print $1}')
+            OLD_HASH=$(cat .req_hash 2>/dev/null || echo "")
+
+            if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+              echo "📦 requirements.txt berubah. Memasang pakej baru..."
+              pip install --prefer-binary -r requirements.txt
+              echo "$NEW_HASH" > .req_hash
+            else
+              echo "⚡ Tiada perubahan pada requirements.txt. Melangkau pip install!"
+            fi
 
             # 4. Restart perkhidmatan systemd
             sudo systemctl restart seedr-bot
